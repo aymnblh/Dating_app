@@ -1,0 +1,57 @@
+name: Random Frequent Commits
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+    - cron: '0 11 * * *'
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  random-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config user.name "aymenblh"
+          git config user.email "aymenboulahia63@gmail.com"
+
+      - name: Random sleep ±1 hour
+        run: |
+          RANDOM_DELAY=$((RANDOM % 3600))
+          echo "Sleeping for $RANDOM_DELAY seconds..."
+          sleep $RANDOM_DELAY
+
+      - name: Randomly skip commit (~30% chance)
+        run: |
+          SKIP=$((RANDOM % 10))
+          if [ $SKIP -lt 3 ]; then
+            echo "Skipping today's commit randomly"
+            exit 0
+          fi
+
+      - name: Create or update activity log
+        run: |
+          mkdir -p .github/activity
+          echo "Updated on: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> .github/activity/frequent_log.txt
+
+      - name: Commit changes if any
+        run: |
+          git add .github/activity/frequent_log.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: random auto activity update ($(date -u +'%Y-%m-%d %H:%M:%S'))"
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Push changes
+        env:
+          REPO_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: |
+          git push "$REPO_URL" HEAD:main
